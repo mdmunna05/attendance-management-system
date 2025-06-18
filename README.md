@@ -4,23 +4,37 @@
 A secure, location-based attendance management system for RGUKT students built using AWS services, fully serverless, with Google Sign-In (restricted to @rguktsklm.ac.in), selfie-based verification using AWS Rekognition, and geolocation restriction.
 
 🚀 Features
+
 ✅ Login with Google (@rguktsklm.ac.in only)
+
 ✅ Face Liveness + Face Match via AWS Rekognition
+
 ✅ Location-based attendance validation
+
 ✅ Student Registration with Selfie Upload
+
 ✅ Attendance submission via webcam selfie
+
 ✅ Serverless Architecture using AWS Lambda, S3, DynamoDB, Rekognition
+
 ✅ No Amplify | Pure AWS SDK + Hosted UI
 
 📂 Project Structure
 
 /project-root
+
 │
+
 ├── login.html         ← Redirects to Cognito Hosted UI (Google Sign-In)
+
 ├── register.html      ← Registration form for new users (with selfie & details)
+
 ├── attendance.html    ← Attendance capture page (location + face match)
+
 ├── denied.html        ← If user is not from @rguktsklm.ac.in
+
 ├── success.html       ← Attendance submission confirmation
+
 └── /assets            ← CSS/JS files if needed
 
 
