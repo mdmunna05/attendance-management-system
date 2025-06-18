@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login - Attendance System</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #4facfe, #00f2fe);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: white;
+      color: #333;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      text-align: center;
+      width: 90%;
+      max-width: 400px;
+    }
+    .card h2 {
+      margin-bottom: 20px;
+    }
+    .loader {
+      margin-top: 20px;
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #4facfe;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg);}
+      100% { transform: rotate(360deg);}
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Logging you in...</h2>
+    <div class="loader"></div>
+  </div>
+
+  <script>
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const idToken = params.get("id_token");
+
+    if (!idToken) {
+      const domain = "https://us-east-1thl1ax6yl.auth.us-east-1.amazoncognito.com";
+      const clientId = "4cfbc9jp99luv3uh9dqfltadkf";
+      const redirectUri = "https://attendance-m-system.s3.amazonaws.com/index.html";
+      const loginUrl = `${domain}/login?client_id=${clientId}&response_type=token&scope=email+openid+profile&redirect_uri=${encodeURIComponent(redirectUri)}`;
+      window.location.href = loginUrl;
+    } else {
+      const payload = JSON.parse(atob(idToken.split('.')[1]));
+      const email = payload.email || "";
+
+      if (!email.endsWith("@rguktsklm.ac.in")) {
+        alert("Access denied. Use your RGUKT email only.");
+        window.location.href = "denied.html";
+      } else {
+        // 🚧 Replace this with a real check via API
+        const registeredEmails = ["test@rguktsklm.ac.in"];
+        if (registeredEmails.includes(email)) {
+          window.location.href = "attendance.html";
+        } else {
+          window.location.href = "register.html";
+        }
+      }
+    }
+  </script>
+</body>
+</html>
