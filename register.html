@@ -1,34 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Register</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Registration</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet"/>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f0f2f5;
+      font-family: 'Poppins', sans-serif;
+      background: #f0f4f8;
       display: flex;
-      align-items: center;
       justify-content: center;
+      align-items: center;
       height: 100vh;
     }
-    .card {
+
+    .container {
       background: white;
-      padding: 40px;
-      border-radius: 15px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-      text-align: center;
-      max-width: 400px;
+      padding: 30px 40px;
+      border-radius: 16px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 450px;
     }
+
     h2 {
-      color: #333;
+      text-align: center;
+      margin-bottom: 20px;
+      color: #2d3748;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: 600;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e0;
+      outline: none;
+      transition: 0.2s;
+    }
+
+    input:focus, select:focus {
+      border-color: #4299e1;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      margin-top: 20px;
+      background-color: #4299e1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 16px;
+      transition: background-color 0.3s;
+    }
+
+    .btn:hover {
+      background-color: #3182ce;
+    }
+
+    .success {
+      text-align: center;
+      margin-top: 20px;
+      color: green;
+      font-weight: 600;
+    }
+
+    .error {
+      text-align: center;
+      margin-top: 20px;
+      color: red;
+      font-weight: 600;
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h2>👤 New User</h2>
-    <p>We don’t recognize you. Please complete registration.</p>
+  <div class="container">
+    <h2>Student Registration 📝</h2>
+    <form id="registerForm">
+      <label for="studentId">Student ID</label>
+      <input type="text" id="studentId" required />
+
+      <label for="branch">Branch</label>
+      <select id="branch" required>
+        <option value="">Select Branch</option>
+        <option value="CSE">CSE</option>
+        <option value="ECE">ECE</option>
+        <option value="EEE">EEE</option>
+        <option value="Mech">Mechanical</option>
+        <option value="Civil">Civil</option>
+      </select>
+
+      <label for="section">Section</label>
+      <input type="text" id="section" required />
+
+      <label for="selfie">Upload Selfie</label>
+      <input type="file" id="selfie" accept="image/*" required />
+
+      <button class="btn" type="submit">Register ✅</button>
+    </form>
+    <div id="message"></div>
   </div>
+
+  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.814.0.min.js"></script>
+  <script>
+    // Replace with your values
+    const bucketName = "ams-registered-selfies";
+    const region = "us-east-1";
+    const identityPoolId = "us-east-1:a89513ab-fb45-4a40-a77e-309c4bbd1a37";
+    const apiEndpoint = "https://wkxxgh7jqc.execute-api.us-east-1.amazonaws.com/registerUserHandler";
+
+    AWS.config.update({
+      region: region,
+      credentials: new AWS.CognitoIdentityCredentials({
+        IdentityPoolId: identityPoolId,
+      }),
+    });
+
+    const s3 = new AWS.S3({ params: { Bucket: bucketName } });
+
+    document.getElementById("registerForm").onsubmit = async function (e) {
+      e.preventDefault();
+      const message = document.getElementById("message");
+      message.textContent = "";
+
+      const studentId = document.getElementById("studentId").value;
+      const branch = document.getElementById("branch").value;
+      const section = document.getElementById("section").value;
+      const file = document.getElementById("selfie").files[0];
+
+      if (!file) {
+        message.textContent = "Please upload a selfie.";
+        message.className = "error";
+        return;
+      }
+
+      const key = `students/${studentId}.jpg`;
+      const params = {
+        Key: key,
+        ContentType: file.type,
+        Body: file,
+        ACL: "public-read"
+      };
+
+      try {
+        await s3.upload(params).promise();
+        const selfieUrl = `https://${bucketName}.s3.amazonaws.com/${key}`;
+
+        const response = await fetch(apiEndpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            studentId,
+            branch,
+            section,
+            selfieUrl
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          message.textContent = "🎉 Registered Successfully!";
+          message.className = "success";
+          document.getElementById("registerForm").reset();
+        } else {
+          message.textContent = "❌ Error: " + data.message;
+          message.className = "error";
+        }
+      } catch (err) {
+        console.error("Upload or Registration Failed:", err);
+        message.textContent = "❌ Something went wrong. Try again.";
+        message.className = "error";
+      }
+    };
+  </script>
 </body>
 </html>
