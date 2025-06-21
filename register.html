@@ -111,79 +111,100 @@
   </div>
 
   <script src="https://sdk.amazonaws.com/js/aws-sdk-2.814.0.min.js"></script>
-  <script>
-    // Replace with your values
-    const bucketName = "ams-registered-selfies";
-    const region = "us-east-1";
-    const identityPoolId = "us-east-1:a89513ab-fb45-4a40-a77e-309c4bbd1a37";
-    const apiEndpoint = "https://wkxxgh7jqc.execute-api.us-east-1.amazonaws.com/registerUserHandler";
+<script>
+  const bucketName = "ams-registered-selfies";
+  const region = "us-east-1";
+  const identityPoolId = "us-east-1:a89513ab-fb45-4a40-a77e-309c4bbd1a37";
+  const apiEndpoint = "https://wkxxgh7jqc.execute-api.us-east-1.amazonaws.com/registerUserHandler";
+  const getStudentApi = "https://2652jdx1g6.execute-api.us-east-1.amazonaws.com/getStudentInfo";
 
-    AWS.config.update({
-      region: region,
-      credentials: new AWS.CognitoIdentityCredentials({
-        IdentityPoolId: identityPoolId,
-      }),
-    });
+  AWS.config.update({
+    region: region,
+    credentials: new AWS.CognitoIdentityCredentials({
+      IdentityPoolId: identityPoolId,
+    }),
+  });
 
-    const s3 = new AWS.S3({ params: { Bucket: bucketName } });
+  const s3 = new AWS.S3({ params: { Bucket: bucketName } });
 
-    document.getElementById("registerForm").onsubmit = async function (e) {
-      e.preventDefault();
-      const message = document.getElementById("message");
-      message.textContent = "";
+  document.getElementById("registerForm").onsubmit = async function (e) {
+    e.preventDefault();
+    const message = document.getElementById("message");
+    message.textContent = "";
 
-      const studentId = document.getElementById("studentId").value;
-      const branch = document.getElementById("branch").value;
-      const section = document.getElementById("section").value;
-      const file = document.getElementById("selfie").files[0];
+    const studentId = document.getElementById("studentId").value.toLowerCase();
+    const branch = document.getElementById("branch").value;
+    const section = document.getElementById("section").value;
+    const file = document.getElementById("selfie").files[0];
 
-      if (!file) {
-        message.textContent = "Please upload a selfie.";
-        message.className = "error";
-        return;
-      }
+    if (!file) {
+      message.textContent = "Please upload a selfie.";
+      message.className = "error";
+      return;
+    }
 
-      const key = `students/${studentId}.jpg`;
-      const params = {
-        Key: key,
-        ContentType: file.type,
-        Body: file,
-        ACL: "public-read"
-      };
-
-      try {
-        await s3.upload(params).promise();
-        const selfieUrl = `https://${bucketName}.s3.amazonaws.com/${key}`;
-
-        const response = await fetch(apiEndpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            studentId,
-            branch,
-            section,
-            selfieUrl
-          })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          message.textContent = "🎉 Registered Successfully!";
-          message.className = "success";
-          document.getElementById("registerForm").reset();
-        } else {
-          message.textContent = "❌ Error: " + data.message;
-          message.className = "error";
-        }
-      } catch (err) {
-        console.error("Upload or Registration Failed:", err);
-        message.textContent = "❌ Something went wrong. Try again.";
-        message.className = "error";
-      }
+    const key = `students/${studentId}.jpg`;
+    const params = {
+      Key: key,
+      ContentType: file.type,
+      Body: file,
+      ACL: "public-read"
     };
-  </script>
+
+    try {
+      await s3.upload(params).promise();
+      const selfieUrl = `https://${bucketName}.s3.amazonaws.com/${key}`;
+
+      const response = await fetch(apiEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          studentId,
+          branch,
+          section,
+          selfieUrl
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        message.textContent = "🎉 Registered Successfully!";
+        message.className = "success";
+        document.getElementById("registerForm").reset();
+
+        // ✅ Wait and confirm registration appears in DynamoDB
+        const token = localStorage.getItem("idToken");
+
+        setTimeout(async () => {
+          try {
+            const check = await fetch(`${getStudentApi}?studentId=${studentId}`);
+            const checkData = await check.json();
+
+            if (checkData && checkData.studentId) {
+              window.location.href = `attendance.html#id_token=${token}`;
+            } else {
+              message.textContent = "⏳ Sync issue. Please wait and try again.";
+              message.className = "error";
+            }
+          } catch (err) {
+            message.textContent = "⚠️ Sync failed. Try again.";
+            message.className = "error";
+          }
+        }, 3000); // wait 3 seconds for DynamoDB sync
+      } else {
+        message.textContent = "❌ Error: " + data.message;
+        message.className = "error";
+      }
+    } catch (err) {
+      console.error("Upload or Registration Failed:", err);
+      message.textContent = "❌ Something went wrong. Try again.";
+      message.className = "error";
+    }
+  };
+</script>
+
 </body>
 </html>
