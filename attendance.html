@@ -1,34 +1,130 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Attendance</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600&display=swap" rel="stylesheet"/>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #e0ffe0;
+      font-family: 'Urbanist', sans-serif;
+      background: #f0f4f8;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
+      margin: 0;
     }
-    .box {
-      background: white;
-      padding: 40px;
-      border-radius: 15px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+
+    .card {
+      background: #fff;
+      padding: 35px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      max-width: 460px;
+      width: 100%;
       text-align: center;
-      max-width: 400px;
     }
+
     h2 {
-      color: #333;
+      margin-bottom: 20px;
+      color: #2d3748;
+    }
+
+    .info-box {
+      text-align: left;
+      background: #f7fafc;
+      padding: 15px 20px;
+      border-radius: 12px;
+      margin-bottom: 25px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .info-box p {
+      margin: 8px 0;
+      font-weight: 500;
+      color: #4a5568;
+    }
+
+    .loading {
+      font-style: italic;
+      color: #999;
+    }
+
+    .error {
+      color: red;
+      font-weight: 500;
     }
   </style>
 </head>
 <body>
-  <div class="box">
+  <div class="card">
     <h2>📸 Attendance Portal</h2>
-    <p>You are signed in. Ready to mark attendance.</p>
+
+    <div id="info" class="info-box">
+      <p class="loading">Fetching student info...</p>
+    </div>
+
+    <p>✅ You are signed in and ready to mark attendance.</p>
   </div>
+
+  <script>
+    function getIdToken() {
+      const hash = window.location.hash.substring(1);
+      const params = new URLSearchParams(hash);
+      const token = params.get("id_token");
+
+      if (token) {
+        localStorage.setItem("idToken", token);
+        return token;
+      }
+
+      return localStorage.getItem("idToken");
+    }
+
+    function fetchStudentInfo(token, retry = false) {
+      if (!token) {
+        document.getElementById("info").innerHTML = `<p class="error">❌ Login token not found. Please login again.</p>`;
+        return;
+      }
+
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const email = payload.email || "";
+        const studentId = email.split('@')[0].toLowerCase();
+
+        const apiUrl = "https://2652jdx1g6.execute-api.us-east-1.amazonaws.com/getStudentInfo";
+
+        fetch(`${apiUrl}?studentId=${studentId}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.studentId) {
+              document.getElementById("info").innerHTML = `
+                <p><strong>👤 Student ID:</strong> ${data.studentId}</p>
+                <p><strong>🏢 Branch:</strong> ${data.branch}</p>
+                <p><strong>🧾 Section:</strong> ${data.section}</p>
+              `;
+            } else if (!retry) {
+              // Wait and try again once
+              setTimeout(() => {
+                fetchStudentInfo(token, true);
+              }, 1500);
+            } else {
+              document.getElementById("info").innerHTML = `<p class="error">❌ Student record not found.</p>`;
+            }
+          })
+          .catch(err => {
+            console.error("Failed to fetch student info", err);
+            document.getElementById("info").innerHTML = `<p class="error">❌ Error fetching student info</p>`;
+          });
+      } catch (err) {
+        console.error("Token parsing failed", err);
+        document.getElementById("info").innerHTML = `<p class="error">❌ Invalid session. Please login again.</p>`;
+      }
+    }
+
+    const idToken = getIdToken();
+    fetchStudentInfo(idToken);
+  </script>
 </body>
 </html>
