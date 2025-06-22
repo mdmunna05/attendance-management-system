@@ -81,10 +81,16 @@ Communication is through API Gateway endpoints (no Amplify).
 📦 AWS Services Used
 
 Amazon Cognito	Authentication via Google OAuth (@rguktsklm.ac.in only)
+
 Amazon S3	Store selfies uploaded during registration & attendance
+
 Amazon DynamoDB	Store user registration data + S3 image URLs
+
 AWS Lambda	Backend functions for processing registration & attendance
+
 Amazon Rekognition	Liveness check & face comparison
+
 API Gateway	Public endpoints for Lambda triggers
+
 IAM Roles & Policies	Secure access between services
 
